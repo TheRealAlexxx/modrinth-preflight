@@ -1,0 +1,22 @@
+{
+  "id": "AABBCCDD",
+  "slug": "outbreak-zone",
+  "title": "Outbreak Zone",
+  "description": "A zombie apocalypse modpack with a handcrafted city, hordes and loot runs.",
+  "body": "# Outbreak Zone\n\nSurvive a quarantined city overtaken by the undead. Scavenge buildings, hold out against nightly hordes and push deeper into the city for better loot.\n\n## Features\n\n- A handcrafted city dimension with lootable buildings\n- Horde events that scale with player count\n- Custom KubeJS loot tables and commands\n\n## Notes\n\n![City street at dusk](https://cdn.modrinth.com/data/AABBCCDD/images/city.png)\n\nJoin the community to report bugs and suggest features.",
+  "project_type": "modpack",
+  "categories": ["adventure", "combat"],
+  "additional_categories": [],
+  "client_side": "required",
+  "server_side": "required",
+  "license": {"id": "MIT", "name": "", "url": ""},
+  "issues_url": "https://github.com/TheRealAlexxx/outbreak-zone/issues",
+  "source_url": "https://github.com/TheRealAlexxx/outbreak-zone",
+  "wiki_url": null,
+  "discord_url": null,
+  "donation_urls": [],
+  "icon_url": "https://cdn.modrinth.com/data/AABBCCDD/icon.png",
+  "gallery": [{"url": "https://cdn.modrinth.com/data/AABBCCDD/images/city.png", "featured": true, "title": "City street", "description": "Dusk in the quarantine zone"}],
+  "versions": ["V1V2V3V4"],
+  "status": "draft"
+}

@@ -1,0 +1,3 @@
+[{"id": "V1V2V3V4", "project_id": "AABBCCDD", "name": "1.0.0", "version_number": "1.0.0",
+  "game_versions": ["1.20.1"], "loaders": ["forge"],
+  "files": [{"filename": "outbreak-zone-1.0.0.mrpack", "primary": true}]}]

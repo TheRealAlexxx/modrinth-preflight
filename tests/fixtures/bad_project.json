@@ -1,0 +1,26 @@
+{
+  "id": "EEFFGGHH",
+  "slug": "minecraft-zombies-1-20",
+  "title": "Minecraft Zombies 1.20.1",
+  "description": "Minecraft Zombies 1.20.1",
+  "body": "",
+  "project_type": "mod",
+  "categories": [],
+  "additional_categories": [],
+  "client_side": "unknown",
+  "server_side": "unknown",
+  "license": {
+    "id": "GPL-3.0-only",
+    "name": "",
+    "url": ""
+  },
+  "issues_url": null,
+  "source_url": null,
+  "wiki_url": null,
+  "discord_url": "https://51.195.60.20:25565",
+  "donation_urls": [],
+  "icon_url": "",
+  "gallery": [],
+  "versions": [],
+  "status": "draft"
+}

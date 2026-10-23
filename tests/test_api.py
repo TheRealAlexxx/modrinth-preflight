@@ -92,3 +92,57 @@ def test_full_run_still_says_ready(capsys):
     buf = io.StringIO()
     preflight.print_report("x", "local", [], stream=buf)
     assert "ready to submit" in buf.getvalue()
+
+
+def test_both_fetches_failing_list_both_reasons(monkeypatch, capsys):
+    import json
+    import os
+    fixtures = os.path.join(os.path.dirname(preflight.__file__), "tests", "fixtures")
+    with open(os.path.join(fixtures, "good_project.json")) as handle:
+        project = json.load(handle)
+    monkeypatch.setattr(preflight, "fetch_project", lambda slug, token=None: project)
+    def boom_versions(slug, token=None):
+        raise preflight.ApiError("Modrinth API error 500 for /v2/project/sodium/version")
+    def boom_categories():
+        raise preflight.ApiError("access denied (403): /v2/tag/category (token missing, invalid, or you are not on this project's team)")
+    monkeypatch.setattr(preflight, "fetch_versions", boom_versions)
+    monkeypatch.setattr(preflight, "fetch_available_categories", boom_categories)
+    rc = preflight.main(["check", "sodium"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "partial run" in out
+    assert "version list unavailable" in out, out
+    assert "category list unavailable" in out, out
+    assert out.count("  - ") >= 2, out
+
+
+def test_403_on_versions_is_degraded_not_crash(monkeypatch, capsys):
+    import json
+    import os
+    fixtures = os.path.join(os.path.dirname(preflight.__file__), "tests", "fixtures")
+    with open(os.path.join(fixtures, "good_project.json")) as handle:
+        project = json.load(handle)
+    monkeypatch.setattr(preflight, "fetch_project", lambda slug, token=None: project)
+    def boom(slug, token=None):
+        raise preflight.ApiError("access denied (403): /v2/project/sodium/version (token missing, invalid, or you are not on this project's team)")
+    monkeypatch.setattr(preflight, "fetch_versions", boom)
+    monkeypatch.setattr(preflight, "fetch_available_categories", lambda: [])
+    rc = preflight.main(["check", "sodium"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "version list unavailable" in out
+
+
+def test_strict_fails_on_warnings_full_run(monkeypatch, capsys):
+    import json
+    import os
+    fixtures = os.path.join(os.path.dirname(preflight.__file__), "tests", "fixtures")
+    with open(os.path.join(fixtures, "good_project.json")) as handle:
+        project = json.load(handle)
+    monkeypatch.setattr(preflight, "fetch_project", lambda slug, token=None: project)
+    monkeypatch.setattr(preflight, "fetch_versions", lambda slug, token=None: [])
+    monkeypatch.setattr(preflight, "fetch_available_categories", lambda: [])
+    warning_only = [{"kind": "link_problem", "severity": "warning", "section": "links", "message": "double check a link"}]
+    monkeypatch.setattr(preflight, "local_findings", lambda p, v, c: warning_only)
+    assert preflight.main(["check", "sodium"]) == 0, "warnings alone pass without --strict"
+    assert preflight.main(["check", "sodium", "--strict"]) == 1, "warnings fail under --strict"

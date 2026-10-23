@@ -179,13 +179,14 @@ def cmd_check(args):
         if findings is None:
             try:
                 versions = fetch_versions(slug, token)
-            except ApiError:
+            except ApiError as exc:
                 versions = None
+                print("note: version list unavailable (%s); version-aware checks are weaker" % exc, file=sys.stderr)
             if not args.no_tags:
                 try:
                     available_categories = fetch_available_categories()
-                except ApiError:
-                    available_categories = None
+                except ApiError as exc:
+                    print("note: category list unavailable (%s); tag coverage check skipped" % exc, file=sys.stderr)
             findings = local_findings(project, versions, available_categories)
 
     if args.json:

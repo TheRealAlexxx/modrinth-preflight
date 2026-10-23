@@ -36,7 +36,7 @@ class ApiError(Exception):
     pass
 
 
-def _request(path, token=None):
+def _request(path, token=None, not_found=None):
     url = API_BASE + path
     headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
     if token:
@@ -47,7 +47,7 @@ def _request(path, token=None):
             return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         if exc.code == 404:
-            raise ApiError("not found: %s" % path)
+            raise ApiError(not_found or "not found: %s" % path)
         if exc.code in (401, 403):
             raise ApiError("access denied (%s): %s (token missing, invalid, or you are not on this project's team)" % (exc.code, path))
         raise ApiError("Modrinth API error %s for %s" % (exc.code, path))
@@ -56,11 +56,13 @@ def _request(path, token=None):
 
 
 def fetch_project(slug, token=None):
-    return _request("/v2/project/%s" % urllib.parse.quote(slug, safe=""), token)
+    return _request("/v2/project/%s" % urllib.parse.quote(slug, safe=""), token,
+                    not_found="no project named '%s' on Modrinth" % slug)
 
 
 def fetch_versions(slug, token=None):
-    return _request("/v2/project/%s/version" % urllib.parse.quote(slug, safe=""), token)
+    return _request("/v2/project/%s/version" % urllib.parse.quote(slug, safe=""), token,
+                    not_found="no project named '%s' on Modrinth" % slug)
 
 
 def fetch_available_categories():

@@ -48,10 +48,15 @@ Offline mode for CI, using saved API responses:
 python3 preflight.py check --offline project.json --versions versions.json --json
 ```
 
-Exit codes: `0` no required findings, `1` required findings (or any
-finding with `--strict`), `2` usage or fetch error. `--json` gives
-machine-readable output. `python3 preflight.py rules` lists every rule
-the tool knows.
+Exit codes: `0` no required findings, `1` required findings (or, with
+`--strict`, any finding or an incomplete run), `2` usage or fetch error.
+`--json` gives machine-readable output. `python3 preflight.py rules`
+lists every rule the tool knows.
+
+If the version list or category list cannot be fetched, the report says
+so: the summary reads "partial run" and names the skipped checks, the
+JSON carries a non-empty `degraded` list, and `--strict` exits 1. A full
+run never carries that marker.
 
 A ready to submit result from the official engine is exactly what the
 reviewers' checklist would show; from the local engine it is a close
@@ -88,6 +93,15 @@ gaps (they need data only Modrinth has):
 
 `tools/refresh_catalogue.py` diffs the bundled rule catalogue against
 the current upstream source so the tool can be kept in sync.
+
+## Development
+
+Tests need pytest:
+
+```sh
+pip install pytest
+python3 -m pytest tests
+```
 
 ## License
 

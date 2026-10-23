@@ -47,3 +47,48 @@ def test_degraded_version_fetch_is_mentioned(monkeypatch, capsys):
     err = capsys.readouterr().err
     assert "version list unavailable" in err
     assert "weaker" in err
+
+
+def _degraded_run(monkeypatch, capsys, argv):
+    import json
+    import os
+    fixtures = os.path.join(os.path.dirname(preflight.__file__), "tests", "fixtures")
+    with open(os.path.join(fixtures, "good_project.json")) as handle:
+        project = json.load(handle)
+    monkeypatch.setattr(preflight, "fetch_project", lambda slug, token=None: project)
+    def boom(slug, token=None):
+        raise preflight.ApiError("Modrinth API error 500 for /v2/project/sodium/version")
+    monkeypatch.setattr(preflight, "fetch_versions", boom)
+    monkeypatch.setattr(preflight, "fetch_available_categories", lambda: [])
+    rc = preflight.main(argv)
+    out, err = capsys.readouterr().out, capsys.readouterr().err
+    return rc, out, err
+
+
+def test_partial_run_does_not_claim_ready_to_submit(monkeypatch, capsys):
+    rc, out, err = _degraded_run(monkeypatch, capsys, ["check", "sodium"])
+    assert rc == 0
+    assert "ready to submit" not in out
+    assert "no findings in the checks that ran" in out
+    assert "partial run" in out
+    assert "version list unavailable" in out
+
+
+def test_json_marks_degraded(monkeypatch, capsys):
+    import json
+    rc, out, err = _degraded_run(monkeypatch, capsys, ["check", "sodium", "--json"])
+    payload = json.loads(out)
+    assert payload["degraded"], "JSON must mark the run degraded"
+    assert any("version list" in d for d in payload["degraded"])
+
+
+def test_strict_fails_on_partial_run(monkeypatch, capsys):
+    rc, out, err = _degraded_run(monkeypatch, capsys, ["check", "sodium", "--strict"])
+    assert rc == 1, "--strict must not pass a partial run"
+
+
+def test_full_run_still_says_ready(capsys):
+    import io
+    buf = io.StringIO()
+    preflight.print_report("x", "local", [], stream=buf)
+    assert "ready to submit" in buf.getvalue()

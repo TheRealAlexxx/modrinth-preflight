@@ -111,13 +111,18 @@ def worst_severity(findings):
     return worst
 
 
-def print_report(title, source, findings, stream=sys.stdout):
+def print_report(title, source, findings, stream=None, degraded=()):
+    if stream is None:
+        stream = sys.stdout
     counts = {"required": 0, "warning": 0, "suggestion": 0}
     for finding in findings:
         counts[finding["severity"]] = counts.get(finding["severity"], 0) + 1
     print("%s  [%s engine]" % (title, source), file=stream)
     if not findings:
-        print("  no findings - ready to submit for review", file=stream)
+        if degraded:
+            print("  no findings in the checks that ran", file=stream)
+        else:
+            print("  no findings - ready to submit for review", file=stream)
     current_section = None
     icons = {"required": "FAIL", "warning": "WARN", "suggestion": "note"}
     for finding in sorted(findings, key=lambda f: (f["section"], -catalogue.severity_rank(f["severity"]) if f["severity"] in catalogue.SEVERITIES else 0, f["kind"])):
@@ -127,11 +132,16 @@ def print_report(title, source, findings, stream=sys.stdout):
         print("  [%s] %s" % (icons.get(finding["severity"], finding["severity"]), finding["message"]), file=stream)
     print("\n%d required, %d warning, %d suggestion" % (
         counts.get("required", 0), counts.get("warning", 0), counts.get("suggestion", 0)), file=stream)
+    if degraded:
+        print("partial run - some checks did not run:", file=stream)
+        for item in degraded:
+            print("  - %s" % item, file=stream)
 
 
 def cmd_check(args):
     token = os.environ.get(args.token_env, "").strip() or None
     available_categories = None
+    degraded = []
 
     if args.offline:
         try:
@@ -155,6 +165,8 @@ def cmd_check(args):
             except (OSError, json.JSONDecodeError) as exc:
                 print("error: cannot read %s: %s" % (args.tags, exc), file=sys.stderr)
                 return 2
+        if not args.versions:
+            degraded.append("no saved version list given (--versions); version-aware checks are weaker")
         title = "%s (offline: %s)" % (project.get("title") or project.get("slug") or args.offline, args.offline)
         findings = local_findings(project, versions, available_categories)
         source = "local"
@@ -181,12 +193,14 @@ def cmd_check(args):
                 versions = fetch_versions(slug, token)
             except ApiError as exc:
                 versions = None
-                print("note: version list unavailable (%s); version-aware checks are weaker" % exc, file=sys.stderr)
+                degraded.append("version list unavailable (%s); version-aware checks are weaker" % exc)
+                print("note: %s" % degraded[-1], file=sys.stderr)
             if not args.no_tags:
                 try:
                     available_categories = fetch_available_categories()
                 except ApiError as exc:
-                    print("note: category list unavailable (%s); tag coverage check skipped" % exc, file=sys.stderr)
+                    degraded.append("category list unavailable (%s); tag coverage check skipped" % exc)
+                    print("note: %s" % degraded[-1], file=sys.stderr)
             findings = local_findings(project, versions, available_categories)
 
     if args.json:
@@ -200,13 +214,14 @@ def cmd_check(args):
                 "suggestion": sum(1 for f in findings if f["severity"] == "suggestion"),
             },
             "findings": findings,
+            "degraded": degraded,
         }, indent=2))
     else:
-        print_report(title, source, findings)
+        print_report(title, source, findings, degraded=degraded)
 
     if any(f["severity"] == "required" for f in findings):
         return 1
-    if args.strict and findings:
+    if args.strict and (findings or degraded):
         return 1
     return 0
 
@@ -244,7 +259,7 @@ def main(argv=None):
                        help="saved /v2/tag/category response (with --offline)")
     check.add_argument("--json", action="store_true", help="machine-readable output")
     check.add_argument("--strict", action="store_true",
-                       help="exit 1 on warnings and suggestions too")
+                       help="exit 1 on warnings, suggestions, or an incomplete (partial) run")
     check.set_defaults(func=cmd_check)
 
     rules = sub.add_parser("rules", help="list every rule this tool knows about")
